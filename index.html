@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/png" href="./favicon.png">
+    <title>Chat Non Chat</title>
+    <style>
+        @font-face{font-family:type;src:url(../font/apercu-mono.woff) format('woff');font-weight:normal;}
+        :root {--rgb:0, 103, 163;--color: rgb(var(--rgb)); --bg: rgba(var(--rgb), 0.2);}
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        * {margin:0;padding:0;}
+        button {all: unset;}
+
+        html {font: normal 1rem system-ui, sans-serif;color: #333;background:white;overflow-y:scroll;}
+        body {font-family: type, monospace, system-ui, sans-serif;}
+        .wrapper {display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius: 3px;box-sizing: border-box;width: 100%;aspect-ratio: 1;user-select: none;gap:4px;}
+        #grid {display: grid;grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr));gap:20px;padding:24px;}
+            #classifybtn {cursor: pointer;background: rgba(var(--rgb), 0.2);color: var(--color);transition: background-color 125ms ease-in-out, color 125ms ease-in-out;text-align:center;padding: 3em 0.3em;border-radius: 3px;display: flex;flex-direction: column;align-items: center;justify-content: center;border-radius: 3px;box-sizing: border-box;width: 100%;user-select: none;gap: 4px;flex-grow:1;}
+                #classifybtn:hover {color: #fff;background-color: var(--color);}
+                #classifybtn:active {color: transparent;background-color: var(--color);text-decoration: none !important;}
+            #cats {display: contents;}
+                .image-wrapper {position:relative;background:#f3f4f5;}
+                    .image-wrapper.chat {background: #A7D8A7;}
+                    .image-wrapper.nonchat {background: #D8A7A7;}
+                    .image-wrapper.error {background: #D8A7A7;border:4px solid #D9534F;}
+                    .image-wrapper.loading::before {content: '';position: absolute;top: 50%;left: 50%;width:40px;height:40px;z-index: 666;mix-blend-mode: exclusion;background:black;border-radius:50%;translate: -50% -50%;animation: pulse 1.5s infinite;border:2px solid white;}
+                .image-container {overflow:hidden;}
+                    img {object-fit: contain;max-width: 100%;max-height: 100%;user-select:none;pointer-events:none;}
+                .label {position:absolute; top: 50%; left: 50%; translate: -50% -50%; text-align:center; z-index: 22;font-size:40px;display: none;font-weight: 700;text-shadow:0 0 30px rgba(0,0,0,.5);pointer-events:none;user-select: none;}
+                    .chat .chat-label {display:block; color: #A7D8A7;}
+                    .nonchat .nonchat-label {display:block; color: #D8A7A7;}
+                    .error .error-label {display:block; color: #D9534F;}
+
+
+            #dropzone {position:fixed;top:0;left:0;right:0;bottom:0;z-index: -1;background: rgba(var(--rgb), 0.2);color: var(--color);align-items:center;justify-content:center;display:none;user-select:none;}
+                #dropzone.dropping {z-index: 666;display:flex;}
+
+            #model {position:absolute;top:4px;right:24px;display:flex;gap:0.5em;}
+                #model a {color: var(--color);font-size:12px;user-select:none;}
+                    #model a:hover {text-decoration:none;}
+                    #model a:active {color: transparent;}
+
+            .stats {padding:0.5em;position:absolute;bottom:0;left:0;right:0;display:none;padding-top:50%;flex-direction:column;gap:0.75em;}
+                .stats .row {display:flex;gap:1em;justify-content:space-between;}
+                    .chat .stats {background: linear-gradient(0deg, #A7D8A7 12px, transparent);}
+                    .nonchat .stats {background: linear-gradient(0deg, #D8A7A7 12px, transparent);}
+                    .wrapper:hover .stats, .wrapper:focus .stats {display:flex;}
+                    .stat {font-size:12px;font-weight: 600;mix-blend-mode: luminosity;}
+                        .a-stat {}
+                        .b-stat {}
+                        .c-stat {}
+                        .d-stat {}
+
+            .dropdown {position:relative;width:100%;}
+                .dropdownbtn {position:relative;color:var(--color);border:2px solid rgba(var(--rgb), 0.2);padding:0.5em 1em;border-radius:3px;cursor:pointer;transition:color 125ms ease-in-out, background 125ms ease-in-out;}
+                    .dropdownbtn::after {border-style: solid;border-width: 0 0 0.2em 0.2em;content:'';display:block;	height: 0.45em;width: 0.45em;right: 0.75em;position: relative;	top: 50%;transform: translateY(calc(-50% - 0.1em)) rotate(-45deg);border-color: inherit;position: absolute}
+                        .dropdownbtn:hover::after {border-color:white;}
+                            .open .dropdownbtn::after {border-color:transparent;}
+                    .dropdownbtn:hover {background:var(--color);color:#fff;}
+                    .dropdownbtn:active, .open .dropdownbtn {color:transparent;background:var(--color);}
+                .dropdownmenu {display:none;position:absolute;top:calc(100% + 4px);width:100%;background:white;color:var(--color);border-radius:3px;border:2px solid var(--color);box-sizing: border-box;z-index:333;}
+                    .dropdown.open .dropdownmenu {display:flex;flex-direction:column;}
+                    .menuitem {cursor:pointer;padding:0.5em 1em;border:1px solid rgba(var(--rgb), 0.2);}
+                        .menuitem:hover {background:rgba(var(--rgb), 0.2);}
+                        .menuitem:active {background:var(--color);color:transparent;}
+                        .menuitem.current {background:var(--color);color:white;}
+
+                        .modelstats {font-size:0.9em;}
+                        
+    </style>
+</head>
+<body>
+    <div id="model">
+        <a id="model_download" href="improved_cat_not_cat_resnet18_classifier_model_2.pth" download title="download model">Model</a><a href="./train-catnotcat-round-1.py" download title="download python script">Training 1</a><a href="./train-catnotcat-round-2.py" download title="download python script">Training 2</a>
+    </div>
+    <div id="grid">
+        <div class="wrapper" id="picker">
+            <button id="classifybtn" class="monospace" title="Click, paste an image or URL, or drag and drop an image.">Chat Non Chat<br/>(cat not cat)<br/><br/>- Upload image -</button>
+        </div>
+        <section id="cats"></section>
+    </div>
+    <input type="file" id="fileInput" name="file" accept="image/*" style="display:none;">
+    </div>
+    <div id="dropzone">Meow</div>   
+    <script> 
+        const models = [
+            // {
+            //     path: 'improved_cat_not_cat_resnet18_classifier_model_2.pth',
+            //     base: 'resnet18',
+            //     accuracy: 0.9920,
+            //     precision: 0.9879,
+            //     recall: 0.9879,
+            //     f1Score: 0.9879,
+            //     isCurrent: true,
+            // },
+            // {
+            //     path: 'improved_model_efficientnet_b0_SGD_StepLR.pth',
+            //     base: 'efficientnet_b0',
+            //     accuracy: 0.9920,
+            //     precision: 0.9807,
+            //     recall: 0.9953,
+            //     f1Score: 0.9880,
+            //     isCurrent: false,
+            // },
+            {
+                path: 'catnotcat_resnet18_SGD_StepLR_round_2.pth',
+                base: 'resnet18',
+                accuracy: 0.9932,
+                precision: 0.9932,
+                recall: 0.9934,
+                f1Score: 0.9933,
+            },
+            {
+                path: 'catnotcat_mobilenet_v2_SGD_StepLR_round_2.pth',
+                base: 'mobilenet_v2',
+                accuracy: 0.9948,
+                precision: 0.9938,
+                recall: 0.9960,
+                f1Score: 0.9949,
+            },
+            {
+                path: 'catnotcat_efficientnet_b0_SGD_StepLR_round_2.pth',
+                base: 'efficientnet_b0',
+                accuracy: 0.9927,
+                precision: 0.9904,
+                recall: 0.9952,
+                f1Score: 0.9928,
+            },
+            {
+                path: 'catnotcat_resnet34_SGD_StepLR_round_2.pth',
+                base: 'resnet34',
+                accuracy: 0.9965,
+                precision: 0.9966,
+                recall: 0.9964,
+                f1Score: 0.9965,
+            },
+            {
+                path: 'catnotcat_resnet50_SGD_StepLR_round_2.pth',
+                base: 'resnet50',
+                accuracy: 0.9964,
+                precision: 0.9952,
+                recall: 0.9976,
+                f1Score: 0.9964,
+            },
+            {
+                path: 'catnotcat_densenet121_SGD_StepLR_round_2.pth',
+                base: 'densenet121',
+                accuracy: 0.9975,
+                precision: 0.9974,
+                recall: 0.9976,
+                f1Score: 0.9975,
+            }
+        ];
+
+        function getmodelname(index){
+            return `Model ${index + 1} (${models[index].base})`;
+        }
+
+        function createmodelpicker() {
+            const dropdown = document.createElement('div');
+            dropdown.classList.add('dropdown', 'monospace');
+
+            const currentindex = models.findIndex(model => model.current)
+            const currentmodel = models[currentindex >= 0 ? currentindex : 0];
+
+            const btn = document.createElement('div');
+            btn.classList.add('dropdownbtn');
+            btn.textContent = getmodelname(currentindex);
+            btn.onclick = function() {
+                this.closest('.dropdown').classList.toggle('open');
+            };
+            dropdown.append(btn);
+
+            const dropdownMenu = document.createElement('div');
+            dropdownMenu.classList.add('dropdownmenu');
+
+            models.forEach((model, idx) => {
+                const menuItem = createmenuitem(model, idx);
+                dropdownMenu.append(menuItem);
+            });
+
+            dropdown.append(dropdownMenu);
+
+            let wrapper = document.getElementById('picker');
+            wrapper.style.aspectRatio = 'auto';
+            wrapper.prepend(dropdown);
+        }
+
+        function createmenuitem(model, idx) {
+            const item = document.createElement('div');
+            item.classList.add('menuitem');
+            if (model.current) {
+                item.classList.add('current');
+            }
+            item.tabIndex = 0;
+
+            const label = document.createElement('div');
+            label.classList.add('itemlabel');
+            label.textContent = getmodelname(idx);
+            item.append(label);
+
+            const stats = document.createElement('div');
+            stats.classList.add('modelstats');
+
+            const accuracy = document.createElement('div');
+            accuracy.textContent = `# Test Accuracy: ${model.accuracy.toFixed(4)}`;
+            stats.append(accuracy);
+
+            const precision = document.createElement('div');
+            precision.textContent = `# Test Precision: ${model.precision.toFixed(4)}`;
+            stats.append(precision);
+
+            const recall = document.createElement('div');
+            recall.textContent = `# Test Recall: ${model.recall.toFixed(4)}`;
+            stats.append(recall);
+
+            const f1 = document.createElement('div');
+            f1.textContent = `# Test F1-Score: ${model.f1Score.toFixed(4)}`;
+            stats.append(f1);
+
+            item.append(stats);
+
+            item.onclick = item.onkeydown = function(e) {
+                if ( e.type === 'keydown') {
+                    if (e.key !== 'Enter' && e.key !== ' ') {
+                        return;
+                    }
+                    e.preventDefault();
+                }
+                let menu = this.closest('.dropdownmenu');
+                let dropdown = menu.closest('.dropdown');
+                let btn = dropdown.getElementsByClassName('dropdownbtn')[0];
+                let current = menu.querySelector('.current');
+                let id = this.dataset.id;
+                const newmodel = model;
+
+                dropdown.classList.remove('open');
+                current.classList.remove('current');
+                this.classList.add('current');
+
+                const oldmodel = models.find(model => model.current === true);
+                if (oldmodel) {
+                    oldmodel.current = false;
+                }
+                
+                newmodel.current = true;
+
+                const currentindex = models.findIndex(model => model.current);
+                btn.textContent = getmodelname(currentindex);
+
+                document.getElementById('model_download').href = newmodel.path;
+            };
+
+            return item;
+        }
+
+        function loadstats(item, data){
+            if ( data.class == 'Cat' ){
+                item.classList.add('chat');
+            } else {
+                item.classList.add('nonchat');
+            }
+            
+            let stata = item.querySelector('.a-stat');
+            let statb = item.querySelector('.b-stat');
+            let statc = item.querySelector('.c-stat');
+            let statd = item.querySelector('.d-stat');
+
+            let confidence = Math.round(data.confidence * 10000) / 100 + '%';
+            let probability = (Math.round(data.probabilities[0][0] * 1000) / 1000) + ' - ' + (Math.round(data.probabilities[0][1] * 1000) / 1000);
+            let rawscore = (Math.round(data.raw_scores[0][0] * 1000) / 1000) + ' - ' +  (Math.round(data.raw_scores[0][1] * 1000) / 1000);
+
+            stata.append(document.createTextNode('Confidence:'), document.createElement('br'), document.createTextNode(confidence));
+            statb.append(document.createTextNode('Probability:'), document.createElement('br'), document.createTextNode(probability));
+            statc.append(document.createTextNode('Raw Score:'), document.createElement('br'), document.createTextNode(rawscore));
+            statd.append(document.createTextNode('Model:'), document.createElement('br'), document.createTextNode(data.model));
+        }
+
+        function griditem(file, chat, confidence) {
+            const gitem = document.createElement('div');
+            gitem.className = 'image-wrapper wrapper loading';
+            gitem.tabIndex = 0;
+
+            const imgContainer = document.createElement('div');
+            imgContainer.className = 'image-container wrapper';
+
+            const label1 = document.createElement('div');
+            label1.className = 'label chat-label';
+            label1.append(document.createTextNode('Chat'));
+
+            const label2 = document.createElement('div');
+            label2.className = 'label nonchat-label';
+            label2.append(document.createTextNode('Non Chat'));
+
+            const label3 = document.createElement('div');
+            label3.className = 'label error-label';
+            label3.append(document.createTextNode('Error'));
+
+            const stats = document.createElement('div');
+            stats.className = 'stats';
+
+            const stat1 = document.createElement('div');
+            stat1.className = 'stat a-stat';
+
+            const stat2 = document.createElement('div');
+            stat2.className = 'stat b-stat';
+
+            const stat3 = document.createElement('div');
+            stat3.className = 'stat c-stat';
+
+            const stat4 = document.createElement('div');
+            stat4.className = 'stat d-stat';
+
+            const row1 = document.createElement('div');
+            row1.className = 'row';
+            const row2 = document.createElement('div');
+            row2.className = 'row';
+
+            row1.append(stat4);
+            row2.append(stat1, stat2, stat3);
+
+            stats.append(row1, row2);
+
+            gitem.append(imgContainer, stats, label1, label2, label3);
+
+            const img = document.createElement('img');
+            img.alt = "chat non chat";
+            img.loading = "lazy";
+
+            if (typeof file === 'string') {
+                img.onload = function() {
+                    gitem.classList.remove('loading');
+                };
+                img.src = file;
+                imgContainer.appendChild(img);
+            } else if (file instanceof Blob || file instanceof File) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    img.src = e.target.result;
+                    imgContainer.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                console.error('Unsupported file type');
+                gitem.classList.add('error');
+            }
+
+            return gitem;
+        }
+
+        function loadimg(file){
+            if (file.size > 55 * 1024 * 1024) {
+                alert('It\'s too damn big!');
+                return;
+            }
+
+            let item = griditem(file);
+
+            document.getElementById('cats').prepend(item)
+
+            const fileInput = document.getElementById('fileInput');
+
+            const formData = new FormData();
+
+            formData.append('file', file);
+            formData.append('model', models.find(model => model.current === true).path);
+
+            fetch('classify.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error:', data.error, data.details);
+                    item.classList.remove('loading');
+                    item.classList.add('error');
+                } else {
+                    console.log(data);
+                    item.classList.remove('loading');
+                    loadstats(item, data);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while post-processing the image.');
+            });
+        }
+
+        function loaditems(x){
+            console.log(x);
+            let cats = document.getElementById('cats');
+
+            if ( x.status === 'success' ){
+                x.data.forEach((item, i) => {
+                    let gitem = griditem(item.file_path);
+                    // gitem.append(document.createTextNode(item.id));
+                    loadstats(gitem, item);
+                    cats.append(gitem);
+                });
+            }
+        }
+
+        document.getElementById('classifybtn').addEventListener('click', function() {
+            let fileInput = document.getElementById('fileInput');
+            fileInput.value = null;
+            fileInput.click();
+        });
+
+        document.getElementById('fileInput').addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if ( !file ){
+                return;
+            }
+            loadimg(file);
+        });
+
+        document.addEventListener('dragenter', (e) => {
+            document.getElementById('dropzone').classList.add('dropping');
+        });
+
+        document.getElementById('dropzone').addEventListener('dragleave', (e) => {
+            document.getElementById('dropzone').classList.remove('dropping');
+        });
+
+        
+        document.getElementById('dropzone').addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        document.getElementById('dropzone').addEventListener('drop', (e) => {
+            e.preventDefault();
+            document.getElementById('dropzone').classList.remove('dropping');
+            let imageType = /image.*/;
+
+            if (e.dataTransfer.items) {
+                [...e.dataTransfer.items].forEach((item, i) => {
+                if (item.kind === "file") {
+                    const file = item.getAsFile();
+                    if (!file.type.match(imageType)) {
+                        return;
+                    }
+                    loadimg(file);
+                }
+                });
+            } else {
+                [...e.dataTransfer.files].forEach((file, i) => {
+                    if (!file.type.match(imageType)) {
+                        return;
+                    }
+                    loadimg(file);
+                });
+            }
+        });
+
+        document.addEventListener('paste', async (event) => {
+            const clipboardItems = event.clipboardData || event.originalEvent.clipboardData;
+
+            if (!clipboardItems) {
+                console.error('No clipboard data available');
+                return;
+            }
+
+            const items = clipboardItems.items;
+
+            for (const item of items) {
+                if (item.kind === 'file' && item.type.startsWith('image/')) {
+                    const blob = item.getAsFile();
+
+                    if (blob) {
+                        loadimg(blob);
+                    } else {
+                        console.error('Failed to get file from clipboard item');
+                    }
+                } else if (item.kind === 'string' && item.type === 'text/plain') {
+                    const text = await new Promise((resolve) => item.getAsString(resolve));
+
+                    console.log('Pasted text:', text, isValidUrl(text), isImageUrl(text))
+
+                    if (isValidUrl(text) && isImageUrl(text)) {
+                        try {
+                            const response = await fetch(text);
+                            const blob = await response.blob();
+                            if (blob.type.startsWith('image/')) {
+                                loadimg(blob);
+                            } else {
+                                console.error('URL did not point to an image.');
+                            }
+                        } catch (error) {
+                            console.error('Failed to fetch image from URL:', error);
+                        }
+                    }
+                }
+            }
+        });
+
+        function isValidUrl(url) {
+            try {
+                new URL(url);
+                return true;
+            } catch (_) {
+                return false;
+            }
+        }
+
+        function isImageUrl(url) {
+            return url.match(/\.(jpeg|jpg|gif|png|webp|bmp|heic|heif)(\?.*)?$/i); // jpeg|jpg|gif|png|webp|bmp|heic|heif|tiff|tif|svg
+        }
+        const defaultModel = 3;
+        models[defaultModel].current = true;
+        document.getElementById('model_download').href = models[defaultModel].path;
+
+        createmodelpicker();
+    </script>
+    <script src="./query.php"></script>
+</body>
+</html>
